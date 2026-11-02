@@ -27,5 +27,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-documents', fn (User $user): bool => in_array($user->role, ['super_admin', 'ict_head', 'ict_staff'], true));
         Gate::define('approve-documents', fn (User $user): bool => in_array($user->role, ['super_admin', 'ict_head'], true));
         Gate::define('view-reports', fn (User $user): bool => in_array($user->role, ['super_admin', 'ict_head', 'ict_staff', 'auditor', 'viewer'], true));
+        Gate::define('manage-users', fn (User $user): bool => $user->role === 'super_admin');
     }
 }

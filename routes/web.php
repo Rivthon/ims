@@ -7,11 +7,14 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentRevisionController;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\MonitoringController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportCenterController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\TopologyController;
 use App\Http\Controllers\TopologyLinkController;
 use App\Http\Controllers\TopologyNodeController;
+use App\Http\Controllers\UserController;
+use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
@@ -19,7 +22,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'show'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
 });
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::resource('tickets', TicketController::class)->only(['index', 'create', 'store', 'show']);
     Route::patch('/tickets/{ticket}/status', [TicketController::class, 'updateStatus'])->name('tickets.status');
@@ -41,5 +44,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/documents/{document}/revisions/{revision}/download', [DocumentRevisionController::class, 'download'])->name('documents.revisions.download');
     Route::get('/reports', [ReportCenterController::class, 'index'])->name('reports.index');
     Route::get('/reports/export', [ReportCenterController::class, 'export'])->name('reports.export');
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
+    Route::resource('users', UserController::class)->except('show');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

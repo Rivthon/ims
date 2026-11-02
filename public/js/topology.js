@@ -7,6 +7,7 @@
     const nodeMap = new Map(config.nodes.map(node => [node.id, node]));
     const nodeForm = document.querySelector('form input[name="position_x"]')?.form;
     const nodeFormAction = nodeForm?.action;
+    const connectionUrl = config.nodes[0]?.update_url.replace(/\/nodes\/\d+$/, '/links');
     const iconMap = {internet:'☁',cloud:'☁',ont:'◈',router:'◆',firewall:'⬟',core_switch:'▦',switch:'▦',poe_switch:'▦',access_point:'◉',server:'▤',pc:'▣',ups:'▥',nvr:'▤',dvr:'▤',camera:'●'};
     const linkElements = [];
     const createSvg = (tag, attributes = {}) => {
@@ -18,6 +19,12 @@
     const linksLayer = createSvg('g');
     const nodesLayer = createSvg('g');
     svg.append(linksLayer, nodesLayer);
+    if (config.canManage) {
+        const hint = document.createElement('span');
+        hint.className = 'connection-hint';
+        hint.textContent = 'Tarik bulatan biru dari satu node ke node lain untuk menghubungkan';
+        document.querySelector('.topology-toolbar')?.append(hint);
+    }
 
     config.links.forEach(link => {
         const line = createSvg('line', {class:`topology-link ${link.type} ${link.status}`});
@@ -35,6 +42,28 @@
         label.setAttribute('x', (source.x + target.x) / 2);
         label.setAttribute('y', (source.y + target.y) / 2 - 7);
     });
+
+    const suggestedConnectionType = (source, target) => {
+        const types = [source.device_type, target.device_type];
+        if (types.includes('cloud')) return 'cloud';
+        if (types.includes('access_point')) return 'wireless';
+        if (types.includes('poe_switch') && types.includes('camera')) return 'poe';
+        return 'ethernet';
+    };
+
+    const createConnection = async (source, target) => {
+        const response = await fetch(connectionUrl, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':config.csrf},
+            body: JSON.stringify({source_node_id:source.id,target_node_id:target.id,connection_type:suggestedConnectionType(source,target),status:'active'}),
+        });
+        if (response.ok) {
+            window.location.reload();
+            return;
+        }
+        const payload = await response.json().catch(() => ({}));
+        window.alert(payload.message || Object.values(payload.errors || {}).flat()[0] || 'Koneksi gagal dibuat.');
+    };
 
     const setFieldValue = (name, value) => {
         const field = nodeForm?.elements.namedItem(name);
@@ -142,7 +171,49 @@
         const icon = createSvg('text', {class:'node-icon',x:0,y:-14}); icon.textContent = iconMap[node.device_type] || '◆';
         const name = createSvg('text', {class:'node-name',x:0,y:13}); name.textContent = node.name;
         const meta = createSvg('text', {class:'node-meta',x:0,y:29}); meta.textContent = node.ip || node.device_type.replaceAll('_',' ');
-        group.append(box, icon, name, meta); nodesLayer.append(group);
+        group.dataset.nodeId = node.id;
+        group.append(box, icon, name, meta);
+        if (config.canManage) {
+            const connector = createSvg('circle', {class:'node-connector',cx:76,cy:0,r:9,tabindex:'0'});
+            const connectorTitle = createSvg('title'); connectorTitle.textContent = 'Tarik untuk menghubungkan node';
+            connector.append(connectorTitle);
+            connector.addEventListener('click', event => event.stopPropagation());
+            connector.addEventListener('pointerdown', event => {
+                event.stopPropagation(); event.preventDefault();
+                const temporaryLine = createSvg('line', {class:'topology-link connection-preview',x1:node.x,y1:node.y,x2:node.x,y2:node.y});
+                linksLayer.append(temporaryLine);
+                connector.setPointerCapture(event.pointerId);
+                connector.classList.add('connecting');
+                const move = moveEvent => {
+                    const point = svg.createSVGPoint(); point.x = moveEvent.clientX; point.y = moveEvent.clientY;
+                    const canvasPoint = point.matrixTransform(svg.getScreenCTM().inverse());
+                    temporaryLine.setAttribute('x2', canvasPoint.x); temporaryLine.setAttribute('y2', canvasPoint.y);
+                };
+                const finish = async finishEvent => {
+                    connector.removeEventListener('pointermove', move);
+                    connector.removeEventListener('pointerup', finish);
+                    connector.removeEventListener('pointercancel', cancel);
+                    connector.releasePointerCapture(finishEvent.pointerId);
+                    connector.classList.remove('connecting');
+                    temporaryLine.remove();
+                    const targetGroup = document.elementFromPoint(finishEvent.clientX, finishEvent.clientY)?.closest('.topology-node');
+                    const target = nodeMap.get(Number(targetGroup?.dataset.nodeId));
+                    if (target && target.id !== node.id) await createConnection(node, target);
+                };
+                const cancel = cancelEvent => {
+                    connector.removeEventListener('pointermove', move);
+                    connector.removeEventListener('pointerup', finish);
+                    connector.removeEventListener('pointercancel', cancel);
+                    connector.releasePointerCapture(cancelEvent.pointerId);
+                    connector.classList.remove('connecting'); temporaryLine.remove();
+                };
+                connector.addEventListener('pointermove', move);
+                connector.addEventListener('pointerup', finish);
+                connector.addEventListener('pointercancel', cancel);
+            });
+            group.append(connector);
+        }
+        nodesLayer.append(group);
         group.addEventListener('click', () => showDetail(node));
         group.addEventListener('keydown', event => { if (event.key === 'Enter') showDetail(node); });
 

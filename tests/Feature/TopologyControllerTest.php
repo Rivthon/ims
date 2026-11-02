@@ -132,4 +132,41 @@ class TopologyControllerTest extends TestCase
         $response->assertRedirect(route('topologies.show', $firstTopology))->assertSessionHasErrors('source_node_id');
         $this->assertDatabaseCount('topology_links', 0);
     }
+
+    public function test_drag_connection_request_creates_link_and_returns_json(): void
+    {
+        $staff = User::factory()->create(['role' => 'ict_staff']);
+        $topology = Topology::factory()->create(['created_by' => $staff->id]);
+        $source = TopologyNode::factory()->create(['topology_id' => $topology->id]);
+        $target = TopologyNode::factory()->create(['topology_id' => $topology->id]);
+
+        $response = $this->actingAs($staff)->postJson(route('topologies.links.store', $topology), [
+            'source_node_id' => $source->id,
+            'target_node_id' => $target->id,
+            'connection_type' => 'ethernet',
+            'status' => 'active',
+        ]);
+
+        $response->assertCreated()->assertJson(['message' => 'Koneksi berhasil dibuat.']);
+        $this->assertDatabaseHas('topology_links', ['topology_id' => $topology->id, 'source_node_id' => $source->id, 'target_node_id' => $target->id]);
+    }
+
+    public function test_drag_connection_rejects_nodes_that_are_already_connected(): void
+    {
+        $staff = User::factory()->create(['role' => 'ict_staff']);
+        $topology = Topology::factory()->create(['created_by' => $staff->id]);
+        $source = TopologyNode::factory()->create(['topology_id' => $topology->id]);
+        $target = TopologyNode::factory()->create(['topology_id' => $topology->id]);
+        $topology->links()->create(['source_node_id' => $source->id, 'target_node_id' => $target->id, 'connection_type' => 'ethernet', 'status' => 'active']);
+
+        $response = $this->actingAs($staff)->postJson(route('topologies.links.store', $topology), [
+            'source_node_id' => $target->id,
+            'target_node_id' => $source->id,
+            'connection_type' => 'ethernet',
+            'status' => 'active',
+        ]);
+
+        $response->assertUnprocessable()->assertJsonValidationErrors('source_node_id');
+        $this->assertDatabaseCount('topology_links', 1);
+    }
 }
