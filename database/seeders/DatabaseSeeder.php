@@ -30,7 +30,23 @@ class DatabaseSeeder extends Seeder
         foreach (['Komputer', 'Printer', 'Jaringan', 'Software', 'CCTV'] as $name) {
             Category::firstOrCreate(['name' => $name, 'type' => 'ticket']);
         }
-        $assetCategory = Category::firstOrCreate(['name' => 'PC Desktop', 'type' => 'asset']);
+        $assetPrefixes = [
+            'PC Desktop' => 'PC',
+            'Laptop' => 'LP',
+            'Printer' => 'PRIN',
+            'Proyektor' => 'PROJ',
+            'Router' => 'RTR',
+            'Switch' => 'SW',
+            'Access Point' => 'AP',
+            'Server' => 'SRV',
+            'UPS' => 'UPS',
+            'CCTV' => 'CCTV',
+            'NVR/DVR' => 'NVR',
+        ];
+        foreach ($assetPrefixes as $name => $prefix) {
+            Category::updateOrCreate(['name' => $name, 'type' => 'asset'], ['asset_prefix' => $prefix]);
+        }
+        $assetCategory = Category::where('name', 'PC Desktop')->where('type', 'asset')->firstOrFail();
         $asset = Asset::firstOrCreate(['code' => 'AST-PC-0001'], ['name' => 'PC Staff ICT', 'category_id' => $assetCategory->id, 'location_id' => $ict->id, 'brand' => 'Dell', 'condition' => 'good', 'status' => 'active', 'pic' => 'Staff ICT']);
         $ticket = Ticket::firstOrCreate(['number' => 'TKT-'.now()->format('Ym').'-00001'], ['reporter_id' => $admin->id, 'technician_id' => $staff->id, 'category_id' => Category::where('name', 'Jaringan')->first()->id, 'location_id' => $lab->id, 'title' => 'Koneksi internet lab tidak stabil', 'description' => 'Beberapa komputer mengalami putus koneksi saat digunakan bersamaan.', 'priority' => 'high', 'status' => 'in_progress']);
         TicketStatusHistory::firstOrCreate(['ticket_id' => $ticket->id, 'to_status' => 'reported'], ['user_id' => $admin->id, 'notes' => 'Laporan awal']);

@@ -24,6 +24,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Model::preventLazyLoading(! app()->isProduction());
         Gate::define('manage-topology', fn (User $user): bool => in_array($user->role, ['super_admin', 'ict_head', 'ict_staff'], true));
+        Gate::define('manage-assets', fn (User $user): bool => in_array($user->role, ['super_admin', 'ict_head', 'ict_staff'], true));
         Gate::define('manage-documents', fn (User $user): bool => in_array($user->role, ['super_admin', 'ict_head', 'ict_staff'], true));
         Gate::define('approve-documents', fn (User $user): bool => in_array($user->role, ['super_admin', 'ict_head'], true));
         Gate::define('view-reports', fn (User $user): bool => in_array($user->role, ['super_admin', 'ict_head', 'ict_staff', 'auditor', 'viewer'], true));
