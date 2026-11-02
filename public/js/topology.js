@@ -5,6 +5,8 @@
 
     const namespace = 'http://www.w3.org/2000/svg';
     const nodeMap = new Map(config.nodes.map(node => [node.id, node]));
+    const nodeForm = document.querySelector('form input[name="position_x"]')?.form;
+    const nodeFormAction = nodeForm?.action;
     const iconMap = {internet:'☁',cloud:'☁',ont:'◈',router:'◆',firewall:'⬟',core_switch:'▦',switch:'▦',poe_switch:'▦',access_point:'◉',server:'▤',pc:'▣',ups:'▥',nvr:'▤',dvr:'▤',camera:'●'};
     const linkElements = [];
     const createSvg = (tag, attributes = {}) => {
@@ -34,6 +36,60 @@
         label.setAttribute('y', (source.y + target.y) / 2 - 7);
     });
 
+    const setFieldValue = (name, value) => {
+        const field = nodeForm?.elements.namedItem(name);
+        if (field) field.value = value ?? '';
+    };
+
+    const resetNodeForm = () => {
+        if (!nodeForm) return;
+        nodeForm.reset();
+        nodeForm.action = nodeFormAction;
+        nodeForm.querySelector('input[name="_method"]')?.remove();
+        setFieldValue('position_x', 180);
+        setFieldValue('position_y', 180);
+        nodeForm.closest('details').querySelector('summary strong').textContent = '+ Tambah Node Perangkat';
+        nodeForm.querySelector('button.btn-primary').textContent = 'Tambah Node';
+        nodeForm.querySelector('[data-cancel-edit]')?.remove();
+    };
+
+    const startEditing = node => {
+        if (!nodeForm) return;
+        nodeForm.action = node.update_url;
+        let methodField = nodeForm.querySelector('input[name="_method"]');
+        if (!methodField) {
+            methodField = document.createElement('input');
+            methodField.type = 'hidden';
+            methodField.name = '_method';
+            nodeForm.append(methodField);
+        }
+        methodField.value = 'PUT';
+        const editableValues = {name:node.name,device_type:node.device_type,status:node.status,code:node.code,ip_address:node.ip,mac_address:node.mac,port:node.port,provider:node.provider,ssid:node.ssid,vlan:node.vlan,channel:node.channel,resolution:node.resolution,recording_mode:node.recording,retention_days:node.retention,notes:node.notes};
+        Object.entries(editableValues).forEach(([name, value]) => setFieldValue(name, value));
+        const assetField = nodeForm.elements.namedItem('asset_id');
+        const locationField = nodeForm.elements.namedItem('location_id');
+        if (assetField) assetField.value = [...assetField.options].find(option => option.textContent.trim().startsWith(`${node.asset} —`))?.value ?? '';
+        if (locationField) locationField.value = [...locationField.options].find(option => option.textContent.trim() === node.location)?.value ?? '';
+        setFieldValue('position_x', node.x);
+        setFieldValue('position_y', node.y);
+        const container = nodeForm.closest('details');
+        container.open = true;
+        container.querySelector('summary strong').textContent = `Edit Node: ${node.name}`;
+        const submitButton = nodeForm.querySelector('button.btn-primary');
+        submitButton.textContent = 'Simpan Perubahan';
+        if (!nodeForm.querySelector('[data-cancel-edit]')) {
+            const cancelButton = document.createElement('button');
+            cancelButton.type = 'button';
+            cancelButton.className = 'btn';
+            cancelButton.dataset.cancelEdit = 'true';
+            cancelButton.textContent = 'Batal Edit';
+            cancelButton.addEventListener('click', resetNodeForm);
+            submitButton.insertAdjacentElement('afterend', cancelButton);
+        }
+        container.scrollIntoView({behavior:'smooth', block:'start'});
+        nodeForm.elements.namedItem('name')?.focus();
+    };
+
     const showDetail = node => {
         const panel = document.getElementById('node-detail');
         panel.replaceChildren();
@@ -50,10 +106,11 @@
         if (config.canManage) {
             const actions = document.createElement('div');
             actions.className = 'flex';
-            const editLink = document.createElement('a');
+            const editLink = document.createElement('button');
+            editLink.type = 'button';
             editLink.className = 'btn btn-primary';
             editLink.textContent = 'Edit Node';
-            editLink.href = `${node.update_url}/edit`;
+            editLink.addEventListener('click', () => startEditing(node));
             const deleteButton = document.createElement('button');
             deleteButton.type = 'button';
             deleteButton.className = 'btn btn-danger';
