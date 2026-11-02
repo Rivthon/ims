@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentRevisionController;
+use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\ProfileController;
@@ -27,6 +28,7 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
     Route::resource('tickets', TicketController::class)->only(['index', 'create', 'store', 'show']);
     Route::patch('/tickets/{ticket}/status', [TicketController::class, 'updateStatus'])->name('tickets.status');
     Route::resource('assets', AssetController::class)->except(['show', 'destroy']);
+    Route::resource('locations', LocationController::class)->except('show');
     Route::resource('maintenance', MaintenanceController::class)->except(['destroy']);
     Route::post('/maintenance/{maintenance}/complete', [MaintenanceController::class, 'complete'])->name('maintenance.complete');
     Route::resource('monitoring', MonitoringController::class)->except(['show', 'destroy']);

@@ -13,6 +13,7 @@
 <a href="{{ route('documents.index') }}" class="{{ request()->routeIs('documents.*')?'active':'' }}">▧ &nbsp; SOP & Dokumen</a>
 @can('view-reports')<a href="{{ route('reports.index') }}" class="{{ request()->routeIs('reports.*')?'active':'' }}">▤ &nbsp; Report Center</a>@endcan
 <div class="nav-title">ADMINISTRASI</div>
+@can('manage-locations')<a href="{{ route('locations.index') }}" class="{{ request()->routeIs('locations.*')?'active':'' }}">⌖ &nbsp; Master Lokasi</a>@endcan
 <a href="{{ route('profile.edit') }}" class="{{ request()->routeIs('profile.*')?'active':'' }}">⚙ &nbsp; Profil & Password</a>
 @can('manage-users')<a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.*')?'active':'' }}">♙ &nbsp; Pengguna & Role</a>@endcan
 </div></aside><main class="main"><header class="topbar"><div><strong>ICT Management System</strong></div><div class="flex"><span class="muted">{{ auth()->user()->name }} · {{ str_replace('_',' ',auth()->user()->role) }}</span><form method="post" action="{{ route('logout') }}">@csrf<button class="btn">Keluar</button></form></div></header><section class="content">@if(session('success'))<div class="alert">{{ session('success') }}</div>@endif @if($errors->any())<div class="alert errors">{{ $errors->first() }}</div>@endif @yield('content')</section></main></div>@stack('scripts')</body></html>
