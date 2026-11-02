@@ -1,0 +1,4 @@
+@extends('layouts.app') @section('title','Buat Topologi') @section('content')
+<h1 class="title">Buat Topologi Baru</h1><p class="subtitle">Pilih jenis diagram dan beri nama area atau instalasi.</p>
+<form class="card form-grid" method="post" action="{{ route('topologies.store') }}">@csrf<div class="field"><label>Nama topologi *</label><input name="name" required value="{{ old('name') }}" placeholder="Jaringan Gedung Utama"></div><div class="field"><label>Jenis *</label><select name="type"><option value="network">Jaringan</option><option value="cctv" @selected(old('type')==='cctv')>CCTV</option></select></div><div class="field full"><label>Deskripsi</label><textarea name="description">{{ old('description') }}</textarea></div><div class="full flex"><button class="btn btn-primary">Buat Topologi</button><a class="btn" href="{{ route('topologies.index') }}">Batal</a></div></form>
+@endsection
